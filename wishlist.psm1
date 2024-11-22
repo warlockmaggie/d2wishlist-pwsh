@@ -122,7 +122,7 @@ class Recommendation {
                     $perkHashes.Add($perkHash) | out-null
                 }
                 else {
-                    Write-Error "Couldn't find hash for perk $perk!"
+                    Write-Error "Couldn't find hash for perk `"$perk`" for $($item.name) w/ $tagFooter!"
                 }
             }
             $hashes.Add($perkHashes) | Out-Null
@@ -181,14 +181,11 @@ class Weapon {
     [void] Finish($parser)
     {
         $this.CondensePvp()
+		$index = 0
         foreach($rec in $this.recs)
         {
-            $descriptionText = $this.description[1]
-            if("pve" -in $rec.tags )
-            {
-                $descriptionText = $this.description[0]
-            }
 
+            $descriptionText = $this.description[$index]
             if($this.adept)
             {
                 $rec.PrintWishlist($parser, $this.adept, $descriptionText)
@@ -196,6 +193,7 @@ class Weapon {
             else {
                 $rec.PrintWishlist($parser, $this.item, $descriptionText)
             }
+			$index++
         }
     }
 }
