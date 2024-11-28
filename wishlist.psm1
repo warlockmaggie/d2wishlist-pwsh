@@ -258,7 +258,7 @@ class PandaText : Parser
             return
         }
 
-        $perkTypes = @("Sights:", "Magazine:", "Perk 1:", "Perk 2:")
+        $perkTypes = @("Sights:", "Barrels:", "Magazine:", "Perk 1:", "Perk 2:", "Perk 3", "Grips:")
         foreach($perktype in $perkTypes)
         {
             if($line -like "*$perktype*")

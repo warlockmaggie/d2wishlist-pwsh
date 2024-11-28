@@ -24,7 +24,7 @@ function Get-DestinyManifest()
         $actualManifest = $manifestResponse.mobileWorldContentPaths.en
         Invoke-WebRequest -Uri "https://www.bungie.net$actualManifest" -OutFile $ManifestFile
         Expand-Archive -Path $manifestFile -DestinationPath . -Force
-        Remove-Item $manifestFile,"manifest.sqlite3"
+        Remove-Item $manifestFile,"manifest.sqlite3" -ErrorAction SilentlyContinue
         Rename-item (get-item *.content | select -ExpandProperty Name) "manifest.sqlite3" -Force
     } catch {
         Write-Error "Failed to download manifest. Error: $($_.Exception.Message)"
