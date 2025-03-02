@@ -143,7 +143,7 @@ class Recommendation {
 class Weapon {
 
     [InventoryItem] $item
-    [InventoryItem] $adept = $null
+    [System.Collections.ArrayList] $variants = [System.Collections.ArrayList]::new()
     [System.Collections.ArrayList] $recs = [System.Collections.ArrayList]::new()
     [System.Collections.ArrayList] $description = [System.Collections.ArrayList]::new()
 
@@ -186,13 +186,11 @@ class Weapon {
         {
 
             $descriptionText = $this.description[$index]
-            if($this.adept)
+            foreach($variant in $this.variants)
             {
-                $rec.PrintWishlist($parser, $this.adept, $descriptionText)
+                $rec.PrintWishlist($parser, $variant, $descriptionText)
             }
-            else {
-                $rec.PrintWishlist($parser, $this.item, $descriptionText)
-            }
+            $rec.PrintWishlist($parser, $this.item, $descriptionText)
 			$index++
         }
     }
@@ -292,14 +290,20 @@ class PandaText : Parser
         if($line -match ".*https://light.gg/db/items/([0-9]+)/.*")
         {
             $item = [InventoryItem]::new($Matches[1])
-            if($item.name -like "*(Adept)")
-            {
-                $this.weapon.adept = $item
-            } else {
-                if($this.weapon)
+
+            if($this.weapon) {
+                if($this.weapon.recs.count -gt 0)
                 {
                     $this.weapon.Finish($this)
-                }    
+                    $this.weapon = [Weapon]::new($item)
+                }
+                else
+                {
+                    $this.weapon.variants.Add($item) | Out-Null
+                }
+            }
+            else 
+            {
                 $this.weapon = [Weapon]::new($item)
             }
             return
