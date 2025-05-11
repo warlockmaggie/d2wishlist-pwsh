@@ -17,7 +17,7 @@ Get-DestinyManifest
 Afterwards, download a [u/pandapaxxy](https://www.reddit.com/user/pandapaxxy/)-style breakdown post. The Markdown can be grabbed from reddit using the same url but with a ".json" at the end.
 
 ```PowerShell
-$url = "https://www.reddit.com/r/sharditkeepit/comments/1gsqph3/festival_of_the_lost_breakdown.json"
+$url = "https://www.reddit.com/r/sharditkeepit/comments/1kjpjqn/rite_of_the_nine_weapon_breakdown_week_1_spire_of.json"
 $json = (Invoke-WebRequest -uri $url).content | convertfrom-json
 $json[0].data.children[0].data.selftext | Out-File ./breakdown.txt
 ```
@@ -25,7 +25,7 @@ Then run `main` to generate the wishlist from the post contents:
 
 ```PowerShell
 $inObj = get-content .\breakdown.txt
-main($inObj)
+build-wishlist $inObj
 ```
 
 Your wishlist will be at `./output.txt`

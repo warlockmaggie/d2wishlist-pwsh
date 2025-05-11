@@ -1,5 +1,5 @@
 using module .\destinyManifest.psm1
-
+[CmdletBinding()]
 
 $TAGMAP = @{
     "pvp"= "PvP"
@@ -10,6 +10,22 @@ $TAGMAP = @{
     "gambit"= "Gambit"
 }
 $TAGORDER = @("pvp","pve","mkb","controller","dps","gambit")
+
+$PERKEXCEPTIONS = @{
+    # Liminal Vigil
+    "1460079227"=@{
+        # Tac Mag = Light Mag
+        # Accurized = Ricochet
+        "Tactical Mag" = "679225683"
+        "Accurized Rounds" = "1885400500"
+    }
+    "3421639790"=@{
+        # Tac Mag = Light Mag
+        # Accurized = Ricochet
+        "Tactical Mag" = "679225683"
+        "Accurized Rounds" = "1885400500"
+    }
+}
 
 function New-CartesianProductLists
 {
@@ -122,12 +138,22 @@ class Recommendation {
                     $perkHashes.Add($perkHash) | out-null
                 }
                 else {
-                    Write-Error "Couldn't find hash for perk `"$perk`" for $($item.name) w/ $tagFooter!"
+                    Write-Verbose "Finding perk exceptions for $perk"
+                    $exceptions = $global:PERKEXCEPTIONS.GetEnumerator().Where({$_.Key -eq $item.hash}).Value.GetEnumerator() | %{ $_ }
+                    if($perk -in $exceptions.Key)
+                    {
+                        $replacementhash = $exceptions.GetEnumerator().Where({$_.Key -eq $perk}).Value
+                        $perkHash = $item.sockets.values | Where-Object {$_.hash -eq $replacementhash}
+                        Write-Verbose "Replacing $perk with $($perkHash.name)"
+                        $perkHashes.add($perkHash) | Out-Null
+                    }
+                    else {
+                        Write-Error "Couldn't find hash for perk `"$perk`" ($perkHash) for $($item.name) [$($item.hash)] w/ $tagFooter!"
+                    }
                 }
             }
             $hashes.Add($perkHashes) | Out-Null
         }
-
 
         $text = "// $($item.name)`n"
         $text += [string]::format("//notes:{0} {1}: `"{2}`" {3}{4}`n",$parser.reviewer,$tagHeader,$description,$mw,$tagFooter)
@@ -182,16 +208,26 @@ class Weapon {
     {
         $this.CondensePvp()
 		$index = 0
+        try {
         foreach($rec in $this.recs)
         {
-
-            $descriptionText = $this.description[$index]
+            try {
+                $descriptionText = $this.description[$index]
+            }
+            catch {
+                $descriptionText = ""
+            }
+            #write-verbose "printing wishlist for $($this.item.name)"
+            $rec.PrintWishlist($parser, $this.item, $descriptionText)
             foreach($variant in $this.variants)
             {
-                $rec.PrintWishlist($parser, $variant, $descriptionText)
+                #Write-Verbose "printing variant"
+                $rec.PrintWishlist($parser, $variant.item, $descriptionText)
             }
-            $rec.PrintWishlist($parser, $this.item, $descriptionText)
 			$index++
+        }
+        } catch {
+            Write-Error [string]::format("error printing {0}, details: {1}", $this.item.name, $_.Exception)
         }
     }
 }
@@ -226,7 +262,7 @@ class PandaText : Parser
 {   
     PandaText(){
         $prop = @{
-            reviewer="pandapaxxy"
+            reviewer="warlockmaggie"
             headerMarker="###"
             RecommendationMarker="Recommended"
             itemSectionMarker="**["
@@ -290,16 +326,18 @@ class PandaText : Parser
         if($line -match ".*https://light.gg/db/items/([0-9]+)/.*")
         {
             $item = [InventoryItem]::new($Matches[1])
-
             if($this.weapon) {
                 if($this.weapon.recs.count -gt 0)
                 {
+                    write-verbose "finishing weapon $($this.weapon.item.name)"
                     $this.weapon.Finish($this)
                     $this.weapon = [Weapon]::new($item)
                 }
                 else
                 {
-                    $this.weapon.variants.Add($item) | Out-Null
+                    write-verbose "Adding variant for $($this.weapon.item.name): $($item.name) ($($item.hash))"
+                    $variant = [Weapon]::new($item)
+                    $this.weapon.variants.Add($variant) | Out-Null
                 }
             }
             else 
@@ -350,8 +388,15 @@ $ExportableTypes =@(
     [Weapon],[Recommendation],[Parser],[PandaText]
 )
 
-function main($inObj)
+function build-wishlist
 {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [string[]]
+        $inObj
+    )
+
     $parser = [PandaText]::new()
     foreach($line in $inObj)
     {
